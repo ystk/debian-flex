@@ -1,3 +1,13 @@
+flex (2.5.35-10.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Use dpkg-buildflags to enable hardened build flags.
+    Thanks to Moritz Muehlenhoff <jmm@debian.org>. (Closes: #655414)
+  * Add prototypes for yy_[gs]etcolumn in re-entrant mode, taken from Fedora.
+    Thanks to Daniel Stone <daniel@fooishbar.org>. (Closes: #667027)
+
+ -- Guillem Jover <guillem@debian.org>  Sat, 30 Jun 2012 17:03:27 +0200
+
 flex (2.5.35-10) unstable; urgency=low
 
   * Bug fix: "flex is not GNU flex", thanks to Santiago Vila

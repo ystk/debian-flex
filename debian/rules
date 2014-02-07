@@ -52,7 +52,10 @@ include debian/common/copt.mk
 include debian/common/automake.mk
 
 CFLAGS  += -Wall -D_REENTRANT
+CFLAGS  += $(shell dpkg-buildflags --get CFLAGS)
+CFLAGS  += $(shell dpkg-buildflags --get CPPFLAGS)
 
+LDFLAGS += $(shell dpkg-buildflags --get LDFLAGS)
 
 all:
 	@echo nothing to be done
