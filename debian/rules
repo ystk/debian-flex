@@ -1,69 +1,77 @@
-#! /usr/bin/make -f
-############################ -*- Mode: Makefile; coding: utf-8 -*- ###########################
-## rules --- 
-## Author           : Manoj Srivastava ( srivasta@glaurung.green-gryphon.com ) 
-## Created On       : Fri Nov 14 12:33:34 2003
-## Created On Node  : glaurung.green-gryphon.com
-## Last Modified By : Manoj Srivastava
-## Last Modified On : Fri Mar 12 12:15:52 2004
-## Last Machine Used: glaurung.internal.golden-gryphon.com
-## Update Count     : 73
-## Status           : Unknown, Use with caution!
-## HISTORY          : 
-## Description      : 
-## 
-## arch-tag: 9a5063f4-1e20-4fff-b22a-de94c1e3d954
-## 
-## This program is free software; you can redistribute it and/or modify
-## it under the terms of the GNU General Public License as published by
-## the Free Software Foundation; either version 2 of the License, or
-## (at your option) any later version.
-##
-## This program is distributed in the hope that it will be useful,
-## but WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-## GNU General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with this program; if not, write to the Free Software
-## Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-##
-###############################################################################
+#!/usr/bin/make -f
+# Uncomment this to turn on verbose mode.
+# export DH_VERBOSE=1
+package:=flex
+SRCTOP:= $(shell if [ "$$PWD" != "" ]; then echo $$PWD; else pwd; fi)
+INSTALL = install
+ifeq (,$(filter nostrip,$(DEB_BUILD_OPTIONS)))
+    INSTALL_PROGRAM += -s
+endif
 
-# Include dpkg-architecture generated variables
-include debian/common/archvars.mk
+install_file	= $(INSTALL) -p	   -o root -g root  -m	644
+install_program = $(INSTALL) -p	   -o root -g root  -m	755
+install_script	= $(INSTALL) -p	   -o root -g root  -m	755
+make_directory	= $(INSTALL) -p -d -o root -g root  -m	755
 
-# Set variables with information extracted from control and changelog files
-include debian/common/pkgvars.mk
+DPKG_ARCH := dpkg-architecture
+export DEB_HOST_MULTIARCH   := $(shell $(DPKG_ARCH) $(ha) -qDEB_HOST_MULTIARCH)
+export DEB_BUILD_MULTIARCH  := $(shell $(DPKG_ARCH) $(ha) -qDEB_BUILD_MULTIARCH)
 
-# variables useful for perl packages
-include debian/common/perlvars.mk
+confflags = ac_cv_lib_util_getloadavg=no
+ifneq ($(DEB_BUILD_MULTIARCH),$(DEB_HOST_MULTIARCH))
+  confflags += ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes
+endif
 
-# we use debconf
-include debian/common/debconf.mk
 
-# Install commands
-include debian/common/install_cmds.mk
+%:
+	dh $@  --with autoreconf
 
-include debian/local-vars.mk
+override_dh_auto_configure:
+	if ! which flex >/dev/null 2>&1; then				   \
+	   if [ -e debian/scan.l.md5sum ] &&				   \
+	      [ "`md5sum scan.l`" = "`cat debian/scan.l.md5sum`" ]; then   \
+		if [ scan.l -nt scan.c ]; then				   \
+		   echo "scan.l newer than scan.c";			   \
+		fi;							   \
+		touch scan.c;						   \
+	   fi;								   \
+	fi
+	dh_auto_configure -- --prefix=$(PREFIX) $(confflags)
+	sed -i -e 's/^dist_doc_DATA[[:space:]]*=.*/dist_doc_DATA=/' doc/Makefile
 
-include debian/common/copt.mk
+override_dh_install:
+	test ! -d debian/tmp/lib/$(DEB_HOST_MULTIARCH) ||               \
+            find debian/tmp/lib/$(DEB_HOST_MULTIARCH) -type f           \
+               -name \*.la -exec rm {} \;
+	dh_install
+	rm -f debian/flex/usr/share/doc/flex/flex.pdf
+ifneq (,$(filter libfl-dev, $(shell dh_listpackages)))
+	$(make_directory) debian/libfl-dev/usr/lib
+	sed -e 's,#DEB_HOST_MULTIARCH#,$(DEB_HOST_MULTIARCH),'           \
+           debian/libfl.shared_object > debian/libfl-dev/usr/lib/$(DEB_HOST_MULTIARCH)/libfl.so
+	ln -s libfl.a debian/libfl-dev/usr/lib/$(DEB_HOST_MULTIARCH)/libl.a
+endif
+ifneq (,$(filter flex, $(shell dh_listpackages)))
+	test ! -f debian/flex/usr/share/doc/flex/COPYING || rm -f debian/flex/usr/share/doc/flex/COPYING
+endif
+	dh_link
 
-include debian/common/automake.mk
 
-CFLAGS  += -Wall -D_REENTRANT
-CFLAGS  += $(shell dpkg-buildflags --get CFLAGS)
-CFLAGS  += $(shell dpkg-buildflags --get CPPFLAGS)
+override_dh_installdocs:
+	dh_installdocs
+ifneq (,$(filter flex-doc, $(shell dh_listpackages)))
+	mv debian/flex-doc/usr/share/doc/flex-doc/flex.html debian/flex-doc/usr/share/doc/flex-doc/html
+endif
 
-LDFLAGS += $(shell dpkg-buildflags --get LDFLAGS)
-
-all:
-	@echo nothing to be done
-
-include debian/common/targets.mk
-
-include debian/local.mk
-
+override_dh_auto_build:
+	dh_auto_build
+ifneq (,$(filter flex-doc, $(shell dh_listpackages)))
+	$(MAKE) -C doc flex.html flex.pdf
+endif
+	bash -n debian/flex-doc.postinst
+	bash -n debian/flex-doc.prerm
+	bash -n debian/flex.postinst
+	bash -n debian/flex.prerm
 
 #Local variables:
 #mode: makefile
