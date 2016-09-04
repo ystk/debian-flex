@@ -5,3 +5,4 @@
 0004-bison-test-fixes-Do-not-use-obsolete-bison-construct.patch
 0005-fix-off-by-one-error-generatred-line-numbers-are-off.patch
 0006-CVE-2016-6354.patch
+0007-generated-code-max_size-seems-to-be-of-type-int-fix-.patch
